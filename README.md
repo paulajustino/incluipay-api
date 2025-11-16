@@ -1,4 +1,4 @@
-# IncluiPlay 💛
+# IncluiPay 💛
 
 ## 📘 Descrição
 Este projeto tem como objetivo a construção de uma **API REST utilizando o framework Spring Boot**. 
