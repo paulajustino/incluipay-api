@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class Project {
     private String description;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     private ProjectCategory category;
 
     @NotBlank
@@ -40,11 +42,14 @@ public class Project {
     @Positive
     private BigDecimal goalAmount;
 
+    @ColumnDefault("0.00")
     private BigDecimal currentAmount = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
+    @ColumnDefault("'ACTIVE'")
     private ProjectStatus status = ProjectStatus.ACTIVE;
 
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "project")
