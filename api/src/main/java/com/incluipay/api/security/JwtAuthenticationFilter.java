@@ -1,6 +1,7 @@
 package com.incluipay.api.security;
 
 import com.incluipay.api.service.JwtService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -47,27 +49,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Verificar se o token é válido e o usuario ainda não está autenticado
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                // Carregar o UserDetails usando o serviço configurado no ApplicationConfig
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            // Carregar o UserDetails usando o serviço configurado no ApplicationConfig
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+                // Se o token for válido
+                if (jwtService.isTokenValid(jwt, userDetails)) {
 
-            // Se o token for válido
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+                    // Criar um objeto de autenticação para o Spring Security
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null, // Credenciais nulas, pois já autenticamos via token
+                            userDetails.getAuthorities()
+                    );
 
-                // Criar um objeto de autenticação para o Spring Security
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null, // Credenciais nulas, pois já autenticamos via token
-                        userDetails.getAuthorities()
-                );
+                    // Adicionar detalhes da requisição
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
+                    );
 
-                // Adicionar detalhes da requisição
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
-                // Autenticar o usuario no contexto de segurança
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Autenticar o usuario no contexto de segurança
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (UsernameNotFoundException | JwtException e) {
+                // Se o usuario não for encontrado ou o JWT for inválido/expirado,
+                // o AuthenticationEntryPoint DEVE capturar isso.
+                System.err.println("Autenticação JWT falhou: " + e.getMessage());
             }
         }
 

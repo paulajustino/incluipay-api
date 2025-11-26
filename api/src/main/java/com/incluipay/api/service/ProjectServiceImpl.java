@@ -1,12 +1,15 @@
 package com.incluipay.api.service;
 
+import com.incluipay.api.dto.ProjectCreationDTO;
 import com.incluipay.api.dto.ProjectFilterDTO;
 import com.incluipay.api.dto.ProjectResponseDTO;
+import com.incluipay.api.dto.ProjectStatusUpdateDTO;
 import com.incluipay.api.mapper.ProjectMapper;
 import com.incluipay.api.model.Project;
 import com.incluipay.api.model.ProjectStatus;
 import com.incluipay.api.repository.ProjectRepository;
 import com.incluipay.api.repository.ProjectSpecification;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -48,7 +51,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     /**
-     * Busca projetos dinamicamente com base em múltiplos filtros.
+     * Busca projetos dinamicamente com base em múltiplos filtros (a partir do uso do Specification).
      */
     public List<ProjectResponseDTO> searchProjects(ProjectFilterDTO filters) {
         Specification<Project> dynamicSpec = ProjectSpecification.filterByParams(
@@ -63,5 +66,31 @@ public class ProjectServiceImpl implements ProjectService {
                 .stream()
                 .map(ProjectMapper::toDTO)
                 .toList();
+    }
+
+    /**
+     * Cria um novo projeto.
+     */
+    @Override
+    @Transactional
+    public ProjectResponseDTO createProject(ProjectCreationDTO creationDTO) {
+        Project project = ProjectMapper.toEntity(creationDTO);
+
+        Project savedProject = projectRepository.save(project);
+        return ProjectMapper.toDTO(savedProject);
+    }
+
+    /**
+     * Altera o status de um projeto.
+     */
+    @Override
+    @Transactional
+    public void updateProjectStatus(Long projectId, ProjectStatusUpdateDTO statusUpdateDTO) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new NoSuchElementException("Projeto não encontrado com ID: " + projectId));
+
+        project.setStatus(statusUpdateDTO.newStatus());
+
+        projectRepository.save(project);
     }
 }

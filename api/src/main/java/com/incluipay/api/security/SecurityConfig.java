@@ -1,8 +1,10 @@
 package com.incluipay.api.security;
 
+import com.incluipay.api.exception.JwtAuthEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -19,20 +21,32 @@ import javax.swing.*;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthEntryPoint authEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Configuração do H2 e CSRF
+                // Configuração de desabilitação do CSRF e Cabeçalhos
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
-                // Regras de Autorização
+                // Regras de autorização de acesso
                 .authorizeHttpRequests(auth -> auth
-                        // Permite acesso público ao H2 Console e aos endpoints de Auth
+                        // Liberação de rotas públicas
+                        .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
                         .requestMatchers("/auth/**", "/h2-console/**").permitAll()
-                        // Exige autenticação (Token JWT) para todos os outros endpoints
+
+                        // Rotas restritas a Role = ADMIN
+                        .requestMatchers(HttpMethod.POST, "/projects").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/projects/{id}/status").hasRole("ADMIN")
+
+                        // Exige Autenticação para o restante ‘default’
                         .anyRequest().authenticated()
+                )
+
+                // Tratamento de exceçao de autenticaçao
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authEntryPoint)
                 )
 
                 // Gestão de Sessão (Chave para JWT)
